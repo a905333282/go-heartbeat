@@ -16,12 +16,12 @@ type HeartbeatService struct {
 // Add a new Pulse with a unique name in string
 func (h *HeartbeatService) AddPulse(name string) {
 	ch := make(chan interface{}, 10)
-	pulse := pulse.NewPulse(name, ch, 3*time.Second)
+	newPulse := pulse.NewPulse(name, ch, 9*time.Second)
 
 	h.Channels[name] = ch
-	h.Pulses[name] = pulse
+	h.Pulses[name] = newPulse
 
-	go pulse.Start()
+	go newPulse.Start()
 }
 
 // RemovePulse
@@ -64,6 +64,14 @@ func (h *HeartbeatService) GetAllPulses() []string {
 	return pulses
 }
 
+func (h *HeartbeatService) Contains(name string) bool {
+
+	if _, ok := h.Pulses[name]; ok {
+		return true
+	}
+	return false
+}
+
 // GetAllPulsesStatus
 // 得到所有Pulse的状态，ALIVE或者DEAD, 0:ALIVE, 1:DEAD
 func (h *HeartbeatService) GetAllPulsesStatus() map[string]pulse.StateType {
@@ -74,7 +82,54 @@ func (h *HeartbeatService) GetAllPulsesStatus() map[string]pulse.StateType {
 	return pulses
 }
 
-func NewHeartbeatService() *HeartbeatService {
+// HeartbeatServiceOption 定义一个所有默认配置的结构体
+type HeartbeatServiceOption struct {
+	Duration time.Duration // 多少秒收不到heartbeat就改变pulse状态
+}
+
+// Option 定义一个接口，实现该接口需要实现apply函数
+type Option interface {
+	apply(*HeartbeatServiceOption)
+}
+
+// funcOption 实现了上述的接口Option
+type funcOption struct {
+	f func(*HeartbeatServiceOption)
+}
+
+func (fdo *funcOption) apply(do *HeartbeatServiceOption) {
+	fdo.f(do)
+}
+
+// 新建一个funcOption， 传入一个函数作为参数
+func newFuncOption(f func(*HeartbeatServiceOption)) *funcOption {
+	return &funcOption{
+		f: f,
+	}
+}
+
+func SetDuration(duration time.Duration) Option {
+	return newFuncOption(func(o *HeartbeatServiceOption) {
+		o.Duration = duration
+	})
+}
+
+func DefaultHeartbeatServiceOption() HeartbeatServiceOption {
+	return HeartbeatServiceOption{
+		Duration: 9 * time.Second,
+	}
+}
+
+func NewHeartbeatService(opts ...Option) *HeartbeatService {
+
+	fmt.Println("-----------new start-----------")
+	defaultOpts := DefaultHeartbeatServiceOption()
+	for _, opt := range opts {
+		opt.apply(&defaultOpts)
+	}
+	fmt.Println(defaultOpts)
+	fmt.Println("-----------new end-----------")
+
 	return &HeartbeatService{
 		Pulses:   make(map[string]*pulse.Pulse),
 		Channels: make(map[string]chan interface{}),
