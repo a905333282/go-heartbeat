@@ -1,7 +1,7 @@
 package pulse
 
 import (
-	"fmt"
+	"github.com/a905333282/go-heartbeat/hook"
 	"time"
 )
 
@@ -19,19 +19,33 @@ type Pulse struct {
 	Duration time.Duration
 	Name     string
 	StopCh   chan interface{}
+	Hooks    hook.Hooks
 }
 
 func (p *Pulse) Start() {
 	for {
 		select {
+
 		case _ = <-p.StopCh:
 			goto END
+
 		case _ = <-p.Channel:
-			fmt.Println("receive str", p.Name)
+
+			go p.Hooks.OnReset(p.Name)
+
+			if p.State == DEAD {
+				go p.Hooks.OnRenewal(p.Name)
+			}
+
 			p.State = ALIVE
 			p.Timer.Reset(p.Duration)
+
 		case <-p.Timer.C:
-			fmt.Println("timeout!!", p.Name)
+
+			if p.State == ALIVE {
+				go p.Hooks.OnDeath(p.Name)
+			}
+
 			p.State = DEAD
 			p.Timer.Reset(p.Duration)
 		}
@@ -49,7 +63,7 @@ func (p *Pulse) GetState() StateType {
 	return p.State
 }
 
-func NewPulse(name string, channel chan interface{}, duration time.Duration) *Pulse {
+func NewPulse(name string, channel chan interface{}, duration time.Duration, hooks hook.Hooks) *Pulse {
 	return &Pulse{
 		Channel:  channel,
 		State:    ALIVE,
@@ -57,5 +71,6 @@ func NewPulse(name string, channel chan interface{}, duration time.Duration) *Pu
 		Duration: duration,
 		Name:     name,
 		StopCh:   make(chan interface{}, 1),
+		Hooks:    hooks,
 	}
 }

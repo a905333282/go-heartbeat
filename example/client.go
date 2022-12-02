@@ -21,7 +21,7 @@ func sendHeartbeat(name string) {
 func main() {
 
 	go sendHeartbeat("test1")
-	//go sendHeartbeat("test2")
+	go sendHeartbeat("test2")
 	fmt.Println("start")
 	select {}
 }

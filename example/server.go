@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/a905333282/go-heartbeat/heartbeat_service"
+	"github.com/a905333282/go-heartbeat/hook"
 	"net/http"
 	"time"
 )
@@ -24,19 +25,40 @@ func Heartbeat(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	fmt.Printf("Get heartbeat from %s", name)
+	//fmt.Printf("Get heartbeat from %s", name)
 }
 
 func StatesMonitor() {
 	for {
 		fmt.Println(heartbeatService.GetAllPulsesStatus())
-		time.Sleep(3 * time.Second)
+		heartbeatService.RemovePulse("test1")
+		time.Sleep(1 * time.Second)
 	}
+}
+
+type MyHook struct {
+	hook.DefaultHooks
+}
+
+func (mh *MyHook) OnAdd(name string) {
+	fmt.Println("OnAdd:", name)
+}
+func (mh *MyHook) OnDeath(name string) {
+	fmt.Println("OnDeath:", name)
+}
+func (mh *MyHook) OnReset(name string) {
+	fmt.Println("OnReset:", name)
+}
+func (mh *MyHook) OnRenewal(name string) {
+	fmt.Println("OnRenewal:", name)
+}
+func (mh *MyHook) OnRemove(name string) {
+	fmt.Println("OnRemove:", name)
 }
 
 func main() {
 
-	heartbeatService = heartbeat_service.NewHeartbeatService(heartbeat_service.SetDuration(3 * time.Second))
+	heartbeatService = heartbeat_service.NewHeartbeatService(heartbeat_service.SetHooks(&MyHook{}))
 
 	go StatesMonitor()
 
