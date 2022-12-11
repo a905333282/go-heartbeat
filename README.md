@@ -6,7 +6,7 @@ With this repository you can build your heartbeat service easily
 
 ## Basic usage
 
-This is a tutorial for the example program in `example` folder
+
 
 In order to run the example:
 
